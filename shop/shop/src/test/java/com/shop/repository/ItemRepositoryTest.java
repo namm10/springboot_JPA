@@ -114,4 +114,31 @@ class ItemRepositoryTest {
             System.out.println(item.toString());
         }
     }
+
+    //테스트 상품 상세 설명을 포함하고 있는 상품데이터 10개가 가격이 높은 순부터 조회
+    //@Query 어노테이션을 사용하여 조회한것
+    @Test
+    @DisplayName("@Query를 이용한 상품 조회 테스트")
+    public void findByItemDetailTest(){
+        this.createItemList();
+        List<Item> itemList = itemRepository.findByItemDetail("테스트 상품 상세 설명");
+        for(Item item : itemList){
+            System.out.println(item.toString());
+        }
+    }
+
+    //native를 활용한 상품데이터 10개가 가격이 높은 순부터 조회 (쿼리는 그대로 사용함)
+    @Test
+    @DisplayName("nativeQuery 속성을 이용한 상품 조회 테스트")
+    public void findByItemDetailByNative(){
+        this.createItemList();
+        List<Item> itemList = itemRepository.findByItemDetailByNative("테스트 상품 상세 설명");
+        for(Item item : itemList){
+            System.out.println(item.toString());
+        }
+    }
+
+
+
+
 }
