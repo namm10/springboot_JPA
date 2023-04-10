@@ -10,9 +10,14 @@ import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+//QuerydslPredicateExecutor를 이용한 상품조회 import
+import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+
 //JpaRepository를 상속받는 ItemRepository를 작성
 //Item클래스는 기본키 타입이 Long이므로 Long을 넣어줌
-public interface ItemRepository extends JpaRepository<Item, Long> {
+public interface ItemRepository extends JpaRepository<Item, Long>,
+//QuerydslPredicateExecutor 인터페이스 상속을 추가
+QuerydslPredicateExecutor<Item>{
 
 
     //itemNm(상품명)으로 데이터를 조회하기 위해서 By 뒤에 필드명인 ItemNm을 메소드의 이름에 붙여줌.

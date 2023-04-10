@@ -11,17 +11,36 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.util.List;
 
+//JPAQueryFactory를 이용한 상품 조회 import
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.jpa.impl.JPAQuery;
+import com.shop.entity.QItem;
+import javax.persistence.PersistenceContext;
+import javax.persistence.EntityManager;
+
+//QuerydslPredicateExecutor를 이용한 상품조회 import
+import com.querydsl.core.BooleanBuilder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.thymeleaf.util.StringUtils;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 @SpringBootTest
+
 //테스트 코드 실행 시 application.properties에 설정해둔 값보다
 //application-test.properties에 같은 설정이 있다면
 //더 높은 우선순위를 부여함 
 //기존에는 MySQL을 사용하지만 테스트 코드 실행 시에는 H2 데이터베이스를 사용하게됨
 @TestPropertySource(locations="classpath:application-test.properties")
 class ItemRepositoryTest {
+
+    //영속성 컨텍스트를 사용하기 위해 @PersistenceContext 어노테이션을 이용해 EntityManager 빈을 주입합니다.
+    @PersistenceContext
+    EntityManager em;
 
     //ItemRepository를 사용하기 위해서 @Autowired 어노테이션을 이용하여 Bean을 주입
     @Autowired
@@ -138,7 +157,103 @@ class ItemRepositoryTest {
         }
     }
 
+    //JPAQueryFactory를 이용한 상품 조회
+    //상품의 가격이 내림차순으로 정렬돼 데이터를 조회
+    //JPAQuery에 추가한 판매상태 코드와 상품 상세 설명이 where 조건에 추가됨
+    //(콘솔창)고정된 쿼리문이 아닌 비즈니스 로직에 따라서 동적으로 쿼리문을 생생해줄 수 있다
+    @Test
+    @DisplayName("Querydsl 조회테스트1")
+    public void queryDslTest(){
+        this.createItemList();
+        //JPAQueryFactory를 이용하여 쿼리를 동적으로 생성
+        //생성자의 파라미터로는 EntityManager 객체를 넣어줌
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+        //Querydsl을 통해 쿼리를 생서하기 위해 플러그인을 통해 자동으로 생성된 QItem 객체를 이용
+        QItem qItem = QItem.item;
+        //자바 소스코드지만 SQL문과 비슷하게 소스를 작성할 수 있다.
+        JPAQuery<Item> query = queryFactory.selectFrom(qItem)
+                .where(qItem.itemSellStatus.eq(ItemSellStatus.SELL))
+                .where(qItem.itemDetail.like("%" + "테스트 상품 상세 설명" + "%"))
+                .orderBy(qItem.price.desc());
 
+        //JPAQuery 메소드중 하나인 fetch를 이용해서 쿼리 결과를 리스트로 반환한다.
+        //fetch() 메소드 실행 시점에 쿼리문이 실행된다.
+        List<Item> itemList = query.fetch();
+
+        for (Item item : itemList){
+            System.out.println(item.toString());
+        }
+    }
+
+    //QuerydslPredicateExecutor를 이용한 상품조회
+    //상품 데이터를 만드는 새로운 메소드 생성
+    //1~5번 상품은 상품의 판매상태를 SELL(판매중)으로 지정하고,
+    //6~10번 상품은 판매상태를 SOLD_OUT(품절)으로 세팅해 생성
+    public void createItemList2(){
+        for(int i=1; i<=5; i++){
+            Item item = new Item();
+            item.setItemNm("테스트 상품" + i);
+            item.setPrice(10000 + i);
+            item.setItemDetail("테스트 상품 상세 설명" + i);
+            item.setItemSellStatus(ItemSellStatus.SELL);
+            item.setStockNumber(100);
+            item.setRegTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            itemRepository.save(item);
+        }
+
+        for(int i=6; i<=10; i++){
+            Item item = new Item();
+            item.setItemNm("테스트 상품" + i);
+            item.setPrice(10000 + i);
+            item.setItemDetail("테스트 상품 상세 설명" + i);
+            item.setItemSellStatus(ItemSellStatus.SOLD_OUT);
+            item.setStockNumber(0);
+            item.setRegTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            itemRepository.save(item);
+        }
+    }
+
+    @Test
+    @DisplayName("상품 Querydsl 조회 테스트 2")
+    public void queryDslTest2(){
+
+        this.createItemList2();
+
+        //BooleanBuilder는 쿼리에 들어갈 조건을 만들어주는 빌더라고 생각하면됨
+        //Predicate를 구현하고 있으며 메소드 체인 형힉으로 사용할 수 있다.
+        BooleanBuilder booleanBuilder = new BooleanBuilder();
+        QItem item = QItem.item;
+        String itemDetail = "테스트 상품 상세 설명";
+        int price = 10003;
+        String itemSellStat = "SELL";
+
+        //필요한 상품을 조회하는데 필요한 "and" 조건을 추가하고 있다.
+        //아래소스에서 상품의 판매상태가 SELL일때만
+        // booleanBuilder에 판매상태 조건을 동적으로 추가하는것을 볼 수 있다.
+        booleanBuilder.and(item.itemDetail.like("%" + itemDetail + "%"));
+        booleanBuilder.and(item.price.gt(price));
+
+        if(StringUtils.equals(itemSellStat, ItemSellStatus.SELL)){
+            booleanBuilder.and(item.itemSellStatus.eq(ItemSellStatus.SELL));
+        }
+
+        //데이터를 페이징해 조회하도록 PageRequest.of() 메소드를 이용해 Pageble 객체를 생성
+        //첫번째 인자는 조회할 페이지의 번호, 두번째 인자는 한 페이지당 조회할 데이터의 개수를 넣어줌
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<Item> itemPagingResult =
+        //QueryDslPredicateExecutor 인터페이스에서 정의한 findALL() 메소드를 이용해
+        //조건에 맞는 데이터를 Page 객체로 받아옴
+        itemRepository.findAll(booleanBuilder, pageable);
+        System.out.println("total elements : " + itemPagingResult. getTotalElements());
+
+        List<Item> resultItemList = itemPagingResult.getContent();
+        for(Item resultItem: resultItemList){
+            System.out.println(resultItem.toString());
+        }
+
+    }
 
 
 }
