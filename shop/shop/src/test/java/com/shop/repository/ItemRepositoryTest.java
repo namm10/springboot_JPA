@@ -27,7 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.thymeleaf.util.StringUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
+//import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 
@@ -157,6 +157,7 @@ class ItemRepositoryTest {
         }
     }
 
+
     //JPAQueryFactory를 이용한 상품 조회
     //상품의 가격이 내림차순으로 정렬돼 데이터를 조회
     //JPAQuery에 추가한 판매상태 코드와 상품 상세 설명이 where 조건에 추가됨
@@ -254,6 +255,7 @@ class ItemRepositoryTest {
         }
 
     }
+
 
 
 }

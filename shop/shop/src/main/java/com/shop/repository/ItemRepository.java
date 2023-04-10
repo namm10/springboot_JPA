@@ -10,8 +10,10 @@ import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+
 //QuerydslPredicateExecutor를 이용한 상품조회 import
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+
 
 //JpaRepository를 상속받는 ItemRepository를 작성
 //Item클래스는 기본키 타입이 Long이므로 Long을 넣어줌
